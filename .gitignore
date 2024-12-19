@@ -1,0 +1,32 @@
+/settings.json
+# Ignore .idea folder and associated files
+.idea/
+*.iml
+
+# Ignore cache directories
+.cache/
+
+# Ignore workspace and temporary files
+/shelf/
+/workspace.xml
+
+# Ignore HTTP Client requests
+/httpRequests/
+
+# Ignore local database connections and configurations
+/dataSources/
+/dataSources.local.xml
+
+# Python-specific ignores
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Environment variables and settings
+.env
+settings.json
+
+# OS-specific files
+.DS_Store
+Thumbs.db
