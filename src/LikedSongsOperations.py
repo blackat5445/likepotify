@@ -1,8 +1,10 @@
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 
+# Constants
 REDIRECT_URI = 'http://localhost:8080'
 SCOPE = 'playlist-modify-public playlist-modify-private user-library-modify user-library-read'
+
 def reorder_liked_songs_from_playlist(playlist_url, client_id, client_secret):
     """Reorder liked songs from the given playlist URL."""
     # Initialize Spotify client
