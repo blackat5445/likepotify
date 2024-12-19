@@ -1,4 +1,6 @@
+import random
 import pyfiglet
+from colorama import Fore
 import time
 import os
 import webbrowser
@@ -6,12 +8,18 @@ import json
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 
+import src.Settings
+from src import *
+
 # Constants
 SETTINGS_FILE = "settings.json"
 TUTORIAL_URL = "https://www.example.com/tutorial"  # Replace with your tutorial URL
 REDIRECT_URI = 'http://localhost:8080'
 SCOPE = 'playlist-modify-public playlist-modify-private user-library-modify user-library-read'
 
+#helper function to clear CUI
+def screen_clear():
+    _ = os.system('cls')
 
 def save_settings(client_id, client_secret):
     """Save Spotify credentials to a JSON file."""
@@ -28,9 +36,11 @@ def load_settings():
 
 
 def display_banner():
-    """Display the banner."""
-    banner = pyfiglet.figlet_format("Likepotify")
-    print(banner)
+    """Display the banner with thick and random art."""
+    fonts = pyfiglet.FigletFont.getFonts()  # Get a list of all available fonts
+    random_font = random.choice(fonts)  # Choose a random font
+    art = pyfiglet.figlet_format("Likepotify", font=random_font)  # Generate art with the random font
+    print(Fore.GREEN + art + Fore.RESET)
 
 
 def about():
@@ -51,63 +61,6 @@ def tutorial():
     time.sleep(2)
 
 
-def settings():
-    """Prompt for client_id and client_secret and save them."""
-    print("\n--- Settings ---")
-    client_id = input("Enter your Spotify Client ID: ").strip()
-    client_secret = input("Enter your Spotify Client Secret: ").strip()
-    save_settings(client_id, client_secret)
-    print("\nSettings saved successfully!")
-    input("\nPress Enter to return to the menu.")
-
-
-def reorder_liked_songs_from_playlist(playlist_url, client_id, client_secret):
-    """Reorder liked songs from the given playlist URL."""
-    # Initialize Spotify client
-    sp = spotipy.Spotify(auth_manager=SpotifyOAuth(
-        client_id=client_id,
-        client_secret=client_secret,
-        redirect_uri=REDIRECT_URI,
-        scope=SCOPE
-    ))
-
-    # Extract playlist ID from URL
-    playlist_id = playlist_url.split("/")[-1].split("?")[0]
-
-    # Fetch all tracks in the playlist (handle pagination)
-    offset = 0
-    limit = 100
-    all_tracks = []
-    while True:
-        results = sp.playlist_items(playlist_id, offset=offset, limit=limit, fields="items.track.id,items.track.name,total")
-        all_tracks.extend(results['items'])
-        offset += limit
-        if len(results['items']) == 0:
-            break
-
-    total_tracks = len(all_tracks)
-    print(f"Total tracks in playlist: {total_tracks}")
-
-    # Loop through playlist from bottom to top
-    for i in range(total_tracks - 1, -1, -1):
-        track = all_tracks[i].get('track')  # Safely get 'track' field
-        if not track:  # Skip if 'track' is None
-            print(f"Skipped invalid track at position {i}")
-            continue
-
-        track_id = track.get('id')  # Safely get 'id' field
-        track_name = track.get('name', "Unknown Track")  # Default to "Unknown Track" if 'name' is missing
-
-        if not track_id:  # Skip if 'id' is None
-            print(f"Skipped track without ID: {track_name}")
-            continue
-
-        # Like the song
-        sp.current_user_saved_tracks_add([track_id])
-        print(f"Liked song: {track_name}")
-
-    print("Reordering complete! Check your liked songs on Spotify.")
-
 
 def start():
     """Start the Spotify reordering process."""
@@ -127,7 +80,7 @@ def start():
         return
 
     print("\nProcessing playlist. This may take a while...")
-    reorder_liked_songs_from_playlist(playlist_url, client_id, client_secret)
+    src.LikedSongsOperations.py.reorder_liked_songs_from_playlist(playlist_url, client_id, client_secret)
     input("\nReordering complete! Press Enter to return to the menu.")
 
 
@@ -145,7 +98,7 @@ def menu():
         if choice == "1":
             start()
         elif choice == "2":
-            settings()
+            src.Settings.settings()
         elif choice == "3":
             about()
         elif choice == "4":
