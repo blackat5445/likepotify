@@ -1,38 +1,46 @@
 import random
 import pyfiglet
-from colorama import Fore
 import time
 import os
 import webbrowser
 import json
-import spotipy
-from spotipy.oauth2 import SpotifyOAuth
-
+import winsound
+from colorama import Fore, Style, init
 import src.Settings
-from src import *
+import src.LikedSongsOperations
+
+init()
 
 # Constants
-SETTINGS_FILE = "settings.json"
+maindir = os.path.dirname(os.path.abspath(__file__))
+SETTINGS_FILE = os.path.join(maindir, r'settings.json')
+START_SOUND = os.path.join(maindir, r'assets/sounds/start.wav')
+PLAYLIST_FILE = os.path.join(maindir, r'playlists/Import Playlists/import.txt')
 TUTORIAL_URL = "https://www.example.com/tutorial"  # Replace with your tutorial URL
-REDIRECT_URI = 'http://localhost:8080'
-SCOPE = 'playlist-modify-public playlist-modify-private user-library-modify user-library-read'
+REORDER_OPERATION = src.LikedSongsOperations
+SETTINGS_OPERATION = src.Settings
+
 
 #helper function to clear CUI
 def screen_clear():
     _ = os.system('cls')
 
-def save_settings(client_id, client_secret):
-    """Save Spotify credentials to a JSON file."""
+def save_settings(client_id, client_secret, multi_playlist_mode):
+    """Save Spotify credentials and settings to a JSON file."""
     with open(SETTINGS_FILE, "w") as file:
-        json.dump({"client_id": client_id, "client_secret": client_secret}, file)
+        json.dump({
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "multi_playlist_mode": multi_playlist_mode
+        }, file)
 
 
 def load_settings():
-    """Load Spotify credentials from a JSON file."""
+    """Load Spotify credentials and settings from a JSON file."""
     if os.path.exists(SETTINGS_FILE):
         with open(SETTINGS_FILE, "r") as file:
             return json.load(file)
-    return {"client_id": "", "client_secret": ""}
+    return {"client_id": "", "client_secret": "", "multi_playlist_mode": False}
 
 
 def display_banner():
@@ -48,8 +56,9 @@ def about():
     print("\n--- About ---")
     print("Likepotify: A tool to manage your Spotify liked songs.")
     print("Version: 1.0")
-    print("Developed by: Your Name")
+    print("Developed by: Kasra Falahati")
     input("\nPress Enter to return to the menu.")
+    screen_clear()
 
 
 def tutorial():
@@ -59,6 +68,7 @@ def tutorial():
     webbrowser.open(TUTORIAL_URL)
     print("\nTutorial opened. Returning to menu...")
     time.sleep(2)
+    screen_clear()
 
 
 
@@ -67,24 +77,36 @@ def start():
     settings_data = load_settings()
     client_id = settings_data.get("client_id")
     client_secret = settings_data.get("client_secret")
+    multi_playlist_mode = settings_data.get("multi_playlist_mode", False)
 
     if not client_id or not client_secret:
-        print("\nSpotify credentials are missing. Please configure them in the Settings menu first.")
+        print(Fore.RED + "\nSpotify credentials are missing. Please configure them in the Settings menu first.")
         input("\nPress Enter to return to the menu.")
         return
 
-    playlist_url = input("\nEnter the Spotify playlist link: ").strip()
-    if not playlist_url:
-        print("\nNo playlist link provided. Returning to menu.")
-        input("\nPress Enter to return to the menu.")
-        return
+    if multi_playlist_mode and os.path.exists(PLAYLIST_FILE):
+        print(Fore.BLUE + "Processing multiple playlists...")
+        with open(PLAYLIST_FILE, "r") as file:
+            playlist_urls = [line.strip() for line in file if line.strip()]
+            for playlist_url in playlist_urls:
+                print(Fore.YELLOW + f"\nProcessing playlist: {playlist_url}")
+                REORDER_OPERATION.reorder_liked_songs_from_playlist(playlist_url, client_id, client_secret)
+    else:
+        playlist_url = input("\nEnter the Spotify playlist link: ").strip()
+        if not playlist_url:
+            print(Fore.RED + "\nNo playlist link provided. Returning to menu.")
+            input("\nPress Enter to return to the menu.")
+            return
 
-    print("\nProcessing playlist. This may take a while...")
-    src.LikedSongsOperations.py.reorder_liked_songs_from_playlist(playlist_url, client_id, client_secret)
-    input("\nReordering complete! Press Enter to return to the menu.")
+        print(Fore.GREEN + "\nProcessing playlist. This may take a while...")
+        REORDER_OPERATION.reorder_liked_songs_from_playlist(playlist_url, client_id, client_secret)
+
+    input(Fore.GREEN + "\nReordering complete! Press Enter to return to the menu.")
+    screen_clear()
 
 
 def menu():
+    winsound.PlaySound(START_SOUND, winsound.SND_ASYNC)
     """Display the main menu and handle user input."""
     while True:
         display_banner()
@@ -98,7 +120,7 @@ def menu():
         if choice == "1":
             start()
         elif choice == "2":
-            src.Settings.settings()
+            SETTINGS_OPERATION.settings()
         elif choice == "3":
             about()
         elif choice == "4":
