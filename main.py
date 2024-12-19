@@ -10,7 +10,7 @@ import src.Settings
 import src.LikedSongsOperations
 import src.utils
 just_fix_windows_console()
-init()
+init(autoreset=True)
 
 # Constants
 maindir = os.path.dirname(os.path.abspath(__file__))
