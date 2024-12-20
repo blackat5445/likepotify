@@ -2,7 +2,7 @@ import time
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 from colorama import Fore, Style, init, just_fix_windows_console
-from utils import screen_clear
+from .utils import screen_clear
 
 # Constants
 REDIRECT_URI = 'http://localhost:8080'

@@ -1,7 +1,7 @@
 import time
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
-from utils import screen_clear
+from .utils import screen_clear
 
 # Constants
 REDIRECT_URI = 'http://localhost:8080'
