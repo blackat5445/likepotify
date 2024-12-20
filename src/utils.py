@@ -20,3 +20,8 @@ def load_settings():
         with open(SETTINGS_FILE, "r") as file:
             return json.load(file)
     return {"client_id": "", "client_secret": "", "multi_playlist_mode": False, "reorder_direction": "bottom-to-top"}
+
+def screen_clear():
+    _ = os.system('cls')
+
+
