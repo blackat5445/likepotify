@@ -1,13 +1,23 @@
 
 # LIKEPOTIFY 🎶💚
 
-Likepotify is a handy script that allows you to manage your Spotify playlists and liked songs effortlessly. With this mini script, you can:
+Likepotify is a handy script that allows you to manage your Spotify playlists and liked songs effortlessly.
+
+**BUT WHY?**
+
+Imagine you created a new spotify account (For the **same reason that we all know ;)** ) and now you want to transfer your liked songs from old one to the new one!
+
+well... **YOU CAN'T**, you fire up google and asks how can I transfer my play list? it will tell you to create a play list and share the link then go to your new account add the play list and select all of the songs and add them as liked songs.
+
+So... Yes you guess right! **the order will change!** and **you can't change the order** in liked songs! **even if you have the ability you can't change 5112 songs order!**
+
+**HERE WE GO**
+
+With this mini script, you can:
 
 - Add a playlist to your Spotify liked songs in the correct order.
 - Export your playlists or liked songs into CSV and TXT formats.
 - Create a Spotify playlist from your liked songs.
-
-
 ## Features ✨
 
 **Playlists to Liked Songs**
@@ -27,7 +37,7 @@ Export any Spotify playlist or your liked songs to a CSV or TXT file. The export
 - Automatically create a Spotify playlist from all your liked songs and add them in one click.
 
 
-## Installation 🛠️
+## Installation (Advanced Users) 🛠️
 
 **Prerequisites**
 - Python 3.9 or later
@@ -57,6 +67,11 @@ python main.py
 ```
 Now simply use in menu items to navigate. (1-5 depends on the menu)
 
+## Installation (Not Advanced Users) 🛠️
+
+Simply download zip file, Extract and follow tutorial.
+
+🖥️[Download for windows](https://agenziamagma.it/wp-content/uploads/2024/12/likepotify.zip).🖥️
 ## Tutorials 📚
 You must already create a developer account associated with your spotify account.
 
@@ -154,6 +169,7 @@ likepotify/
 ```
 ## Known Issues & Limitations 🛠️
 
+- There is a problem with the .exe file available in the repo; settings will not be saved.
 - API Rate Limits: Spotify limits the number of requests. If you encounter issues, try again after some time.
 - Large Playlists: The script fetches playlists in batches of 100. Ensure your internet connection is stable for large playlists.
 - Authentication Timeout: If your session expires, you'll need to re-authenticate via the browser.
@@ -175,5 +191,6 @@ Someone who hates Spotify's limitations in transferring playlists to liked songs
 
 Someone who is frustrated by Spotify's lack of attention to user needs for exporting and transferring songs within and outside the platform.
 
-- Kasra Falahati [@blackat5445](https://www.github.com/blackat5445)
-- [Agenzia Magma](https://www.agenziamagma.it)
+- 🌐 [Kasra Falahati](https://www.kasrafalahati.com) 
+- 🐱 [@blackat5445](https://www.github.com/blackat5445)
+- 🌐 [Agenzia Magma](https://www.agenziamagma.it)
