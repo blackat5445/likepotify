@@ -16,9 +16,9 @@ init(autoreset=True)
 # Constants
 maindir = os.path.dirname(os.path.abspath(__file__))
 SETTINGS_FILE = os.path.join(maindir, r'settings.json')
-START_SOUND = os.path.join(maindir, r'assets/sounds/start.wav')
-PLAYLIST_FILE = os.path.join(maindir, r'Import Playlists/import.txt')
-PLAYLIST_FILE_EXPORT = os.path.join(maindir, r'Exported Playlists/')
+START_SOUND = os.path.join(maindir, r'assets\sounds\start.wav')
+PLAYLIST_FILE = os.path.join(maindir, r'Import Playlists\import.txt')
+PLAYLIST_FILE_EXPORT = os.path.join(maindir, r'Exported Playlists')
 TUTORIAL_URL = "https://www.example.com/tutorial"  # Replace with your tutorial URL
 REORDER_OPERATION = src.LikedSongsOperations
 EXPORT_OPERATION = src.ExportPlaylist
@@ -27,8 +27,6 @@ UTILITY = src.utils
 
 
 #helper function to clear CUI
-def screen_clear():
-    _ = os.system('cls')
 
 def display_banner():
     """Display the banner with thick and random art."""
@@ -46,7 +44,7 @@ def about():
     print(Fore.LIGHTRED_EX + "Developed by: KASRA FALAHATI")
     print(Fore.CYAN + "Sponsored by: WWW.AGENZIAMAGMA.IT")
     input("\nPress Enter to return to the menu.")
-    screen_clear()
+    UTILITY.screen_clear()
 
 
 def tutorial():
@@ -56,7 +54,7 @@ def tutorial():
     webbrowser.open(TUTORIAL_URL)
     print("\nTutorial opened. Returning to menu...")
     time.sleep(2)
-    screen_clear()
+    UTILITY.screen_clear()
 
 
 
@@ -92,7 +90,7 @@ def start_playlist_to_liked():
         REORDER_OPERATION.reorder_liked_songs_from_playlist(playlist_url, client_id, client_secret, reorder_direction)
 
     input(Fore.GREEN + "\nReordering complete! Press Enter to return to the menu.")
-    screen_clear()
+    UTILITY.screen_clear()
     menu()
 
 
