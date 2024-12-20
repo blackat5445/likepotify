@@ -9,6 +9,7 @@ from colorama import Fore, Style, init, just_fix_windows_console
 import src.Settings
 import src.LikedSongsOperations
 import src.utils
+import src.ExportPlaylist
 just_fix_windows_console()
 init(autoreset=True)
 
@@ -16,9 +17,11 @@ init(autoreset=True)
 maindir = os.path.dirname(os.path.abspath(__file__))
 SETTINGS_FILE = os.path.join(maindir, r'settings.json')
 START_SOUND = os.path.join(maindir, r'assets/sounds/start.wav')
-PLAYLIST_FILE = os.path.join(maindir, r'playlists/Import Playlists/import.txt')
+PLAYLIST_FILE = os.path.join(maindir, r'Import Playlists/import.txt')
+PLAYLIST_FILE_EXPORT = os.path.join(maindir, r'Exported Playlists/')
 TUTORIAL_URL = "https://www.example.com/tutorial"  # Replace with your tutorial URL
 REORDER_OPERATION = src.LikedSongsOperations
+EXPORT_OPERATION = src.ExportPlaylist
 SETTINGS_OPERATION = src.Settings
 UTILITY = src.utils
 
@@ -57,7 +60,7 @@ def tutorial():
 
 
 
-def start():
+def start_playlist_to_liked():
     """Start the Spotify reordering process."""
     settings_data = UTILITY.load_settings()
     client_id = settings_data.get("client_id")
@@ -90,6 +93,7 @@ def start():
 
     input(Fore.GREEN + "\nReordering complete! Press Enter to return to the menu.")
     screen_clear()
+    menu()
 
 
 def menu():
@@ -97,7 +101,7 @@ def menu():
     """Display the main menu and handle user input."""
     while True:
         display_banner()
-        print("1 - Start")
+        print("1 - Operations")
         print("2 - Settings")
         print("3 - About")
         print("4 - Tutorial")
@@ -105,7 +109,7 @@ def menu():
         choice = input("\nEnter your choice: ").strip()
 
         if choice == "1":
-            start()
+            menu_operations()
         elif choice == "2":
             SETTINGS_OPERATION.settings()
         elif choice == "3":
@@ -119,6 +123,42 @@ def menu():
             print("\nInvalid choice. Please try again.")
             input("\nPress Enter to return to the menu.")
 
+def menu_operations():
+    """Display the operation menu."""
+    while True:
+        display_banner()
+        print("1 - Playlists to liked songs")
+        print("2 - Export playlist or liked songs to text file")
+        print("3 - Liked songs to play list")
+        print("4 - Back to main menu.")
+        choice = input("\nEnter your choice: ").strip()
+
+        if choice == "1":
+            start_playlist_to_liked()
+        elif choice == "2":
+            # Load settings
+            settings_datas = UTILITY.load_settings()
+            client_id = settings_datas.get("client_id")
+            client_secret = settings_datas.get("client_secret")
+
+            # Check if credentials are available
+            if not client_id or not client_secret:
+                print("\nSpotify credentials not found. Please configure them in the Settings menu first.")
+                input("\nPress Enter to return to the menu.")
+            else:
+                # Proceed with export operation
+                try:
+                    EXPORT_OPERATION.export_to_text_file(client_id, client_secret)
+                except Exception as e:
+                    print(f"\nAn error occurred during export: {e}")
+                    input("\nPress Enter to return to the menu.")
+        elif choice == "3":
+            about()
+        elif choice == "4":
+            menu()
+        else:
+            print("\nInvalid choice. Please try again.")
+            input("\nPress Enter to return to the menu.")
 
 if __name__ == "__main__":
     # Load settings at the start of the program
