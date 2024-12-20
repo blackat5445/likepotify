@@ -4,7 +4,7 @@ import time
 from datetime import datetime
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
-import src.utils
+from utils import screen_clear
 
 # Constants
 REDIRECT_URI = 'http://localhost:8080'
@@ -12,7 +12,7 @@ SCOPE = 'playlist-modify-public playlist-modify-private user-library-modify user
 
 def export_to_text_file(client_id, client_secret):
     """Export liked songs or a playlist to a text file."""
-    src.utils.screen_clear()
+    screen_clear()
     # Initialize Spotify client
     sp = spotipy.Spotify(auth_manager=SpotifyOAuth(
         client_id=client_id,
@@ -170,6 +170,8 @@ def write_to_file(file_prefix, title, tracks, total_songs):
                 writer.writerow([track['id'], track['title'], track['artists'], track['duration'], track['url']])
 
         print(f"Export complete! Files saved as:\n- {txt_filename}\n- {csv_filename}")
+        time.sleep(3)
+        screen_clear()
 
     except Exception as e:
         print(f"Error writing to file: {e}")

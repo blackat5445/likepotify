@@ -2,6 +2,7 @@ import time
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 from colorama import Fore, Style, init, just_fix_windows_console
+from utils import screen_clear
 
 # Constants
 REDIRECT_URI = 'http://localhost:8080'
@@ -100,3 +101,5 @@ def reorder_liked_songs_from_playlist(playlist_url, client_id, client_secret, re
             print(f"Error liking song {track_name}: {e}")
 
     print(Fore.BLUE +"Reordering complete! Check your liked songs on Spotify.")
+    time.sleep(3)
+    screen_clear()

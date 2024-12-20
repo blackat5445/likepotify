@@ -10,6 +10,7 @@ import src.Settings
 import src.LikedSongsOperations
 import src.utils
 import src.ExportPlaylist
+from src.LikedSongsToPlaylist import liked_songs_to_playlist
 just_fix_windows_console()
 init(autoreset=True)
 
@@ -29,9 +30,9 @@ UTILITY = src.utils
 #helper function to clear CUI
 
 def display_banner():
-    """Display the banner with thick and random art."""
-    fonts = pyfiglet.FigletFont.getFonts()  # Get a list of all available fonts
-    random_font = random.choice(fonts)  # Choose a random font
+    """Display the banner."""
+    fonts = pyfiglet.FigletFont.getFonts()
+    random_font = random.choice(fonts)
     art = pyfiglet.figlet_format("Likepotify", font=random_font)  # Generate art with the random font
     print(Fore.GREEN + art + Fore.RESET)
 
@@ -107,16 +108,22 @@ def menu():
         choice = input("\nEnter your choice: ").strip()
 
         if choice == "1":
+            UTILITY.screen_clear()
             menu_operations()
         elif choice == "2":
+            UTILITY.screen_clear()
             SETTINGS_OPERATION.settings()
         elif choice == "3":
+            UTILITY.screen_clear()
             about()
         elif choice == "4":
+            UTILITY.screen_clear()
             tutorial()
         elif choice == "5":
+            UTILITY.screen_clear()
             print("\nExiting... Goodbye!")
-            break
+            time.sleep(3)
+            exit()
         else:
             print("\nInvalid choice. Please try again.")
             input("\nPress Enter to return to the menu.")
@@ -132,8 +139,10 @@ def menu_operations():
         choice = input("\nEnter your choice: ").strip()
 
         if choice == "1":
+            UTILITY.screen_clear()
             start_playlist_to_liked()
         elif choice == "2":
+            UTILITY.screen_clear()
             # Load settings
             settings_datas = UTILITY.load_settings()
             client_id = settings_datas.get("client_id")
@@ -151,8 +160,24 @@ def menu_operations():
                     print(f"\nAn error occurred during export: {e}")
                     input("\nPress Enter to return to the menu.")
         elif choice == "3":
-            about()
+            UTILITY.screen_clear()
+            # Load settings
+            settings_datas = UTILITY.load_settings()
+            client_id = settings_datas.get("client_id")
+            client_secret = settings_datas.get("client_secret")
+
+            if not client_id or not client_secret:
+                print("\nSpotify credentials not found. Please configure them in the Settings menu first.")
+                input("\nPress Enter to return to the menu.")
+            else:
+                # Create a playlist and add liked songs
+                try:
+                    liked_songs_to_playlist(client_id, client_secret)
+                except Exception as e:
+                    print(f"\nAn error occurred: {e}")
+                    input("\nPress Enter to return to the menu.")
         elif choice == "4":
+            UTILITY.screen_clear()
             menu()
         else:
             print("\nInvalid choice. Please try again.")

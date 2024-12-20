@@ -1,5 +1,5 @@
 from colorama import Fore, Style, init, just_fix_windows_console
-from .utils import save_settings, load_settings
+from .utils import save_settings, load_settings, screen_clear
 
 def settings():
     """Manage Spotify settings and multi-playlist mode."""
@@ -33,3 +33,4 @@ def settings():
     save_settings(client_id, client_secret, multi_playlist_mode, reorder_direction)
     print(Fore.GREEN + "\nSettings saved successfully!")
     input("\nPress Enter to return to the menu.")
+    screen_clear()
