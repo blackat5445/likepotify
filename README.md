@@ -32,7 +32,9 @@ Export any Spotify playlist or your liked songs to a CSV or TXT file. The export
 - Artist(s)
 - Duration
 - Spotify Link
+  
 **Liked Songs to Playlist** 
+
 
 - Automatically create a Spotify playlist from all your liked songs and add them in one click.
 
