@@ -95,7 +95,7 @@ def reorder_liked_songs_from_playlist(playlist_url, client_id, client_secret, re
 
         # Like the song
         try:
-            retry_request(sp.current_user_saved_tracks_add, retries=3, delay=10, args=[[track_id]])
+            retry_request(sp.current_user_saved_tracks_add, retries=3, delay=10, track_ids=[track_id])
             print(Fore.LIGHTGREEN_EX + f"Liked song: {track_name}")
         except spotipy.exceptions.SpotifyException as e:
             print(f"Error liking song {track_name}: {e}")
