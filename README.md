@@ -171,7 +171,7 @@ likepotify/
 ```
 ## Known Issues & Limitations 🛠️
 
-- There is a problem with the .exe file available in the repo; settings will not be saved.
+- There is a problem with the .exe file available in the repo; settings will not be saved. (FIXED IN V1.1.0)
 - API Rate Limits: Spotify limits the number of requests. If you encounter issues, try again after some time.
 - Large Playlists: The script fetches playlists in batches of 100. Ensure your internet connection is stable for large playlists.
 - Authentication Timeout: If your session expires, you'll need to re-authenticate via the browser.
