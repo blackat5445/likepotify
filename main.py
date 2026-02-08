@@ -1,103 +1,166 @@
 import random
-import pyfiglet
 import time
 import os
 import webbrowser
-import json
-import winsound
-from colorama import Fore, Style, init, just_fix_windows_console
-import src.Settings
-import src.LikedSongsOperations
-import src.utils
-import src.ExportPlaylist
+
+import pyfiglet
+from colorama import Fore, init, just_fix_windows_console
+
+import src.Settings as Settings
+import src.LikedSongsOperations as LikedSongsOps
+import src.ExportPlaylist as ExportPlaylist
 from src.LikedSongsToPlaylist import liked_songs_to_playlist
+from src.utils import load_settings, screen_clear
+
 just_fix_windows_console()
 init(autoreset=True)
 
-# Constants
-maindir = os.path.dirname(os.path.abspath(__file__))
-SETTINGS_FILE = os.path.join(maindir, r'settings.json')
-START_SOUND = os.path.join(maindir, r'assets\sounds\start.wav')
-PLAYLIST_FILE = os.path.join(maindir, r'Import Playlists\import.txt')
-PLAYLIST_FILE_EXPORT = os.path.join(maindir, r'Exported Playlists')
-TUTORIAL_URL = "https://www.example.com/tutorial"  # Replace with your tutorial URL
-REORDER_OPERATION = src.LikedSongsOperations
-EXPORT_OPERATION = src.ExportPlaylist
-SETTINGS_OPERATION = src.Settings
-UTILITY = src.utils
+# ── Constants ─────────────────────────────────────────────────────────────────
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PLAYLIST_FILE = os.path.join(BASE_DIR, "Import Playlists", "import.txt")
+TUTORIAL_URL = "https://github.com/blackat5445/likepotify"
+
+# Optional startup sound (Windows only, silent elsewhere)
+STARTUP_SOUND = os.path.join(BASE_DIR, "assets", "sounds", "Startup.wav")
 
 
-#helper function to clear CUI
+def _play_startup_sound():
+    """Play the startup sound if available (Windows only)."""
+    try:
+        import winsound
+        if os.path.exists(STARTUP_SOUND):
+            winsound.PlaySound(STARTUP_SOUND, winsound.SND_ASYNC)
+    except ImportError:
+        pass  # Not on Windows — just skip
+
+
+# ── UI helpers ────────────────────────────────────────────────────────────────
 
 def display_banner():
-    """Display the banner."""
     fonts = pyfiglet.FigletFont.getFonts()
-    random_font = random.choice(fonts)
-    art = pyfiglet.figlet_format("Likepotify", font=random_font)  # Generate art with the random font
-    print(Fore.GREEN + art + Fore.RESET)
+    art = pyfiglet.figlet_format("Likepotify", font=random.choice(fonts))
+    print(Fore.GREEN + art)
 
 
 def about():
-    """Display information about the program."""
     print(Fore.LIGHTGREEN_EX + "\n--- About ---")
-    print(Fore.LIGHTBLACK_EX + "Likepotify: A tool to transfer your play list to liked songs.")
-    print(Fore.YELLOW + "Version: 1.0")
+    print(Fore.LIGHTBLACK_EX + "Likepotify: Transfer playlists to liked songs & more.")
+    print(Fore.YELLOW + "Version: 1.1")
     print(Fore.LIGHTRED_EX + "Developed by: KASRA FALAHATI")
     print(Fore.CYAN + "Sponsored by: WWW.AGENZIAMAGMA.IT")
-    input("\nPress Enter to return to the menu.")
-    UTILITY.screen_clear()
+    input("\nPress Enter to return.")
+    screen_clear()
 
 
 def tutorial():
-    """Redirect to the tutorial page."""
-    print(Fore.LIGHTGREEN_EX + "Please wait while we are opening the tutorial...")
-    time.sleep(2)
+    print(Fore.LIGHTGREEN_EX + "Opening tutorial in your browser...")
     webbrowser.open(TUTORIAL_URL)
-    print("\nTutorial opened. Returning to menu...")
-    time.sleep(2)
-    UTILITY.screen_clear()
+    time.sleep(1)
+    screen_clear()
 
 
+# ── Credential check ─────────────────────────────────────────────────────────
+
+def _require_credentials():
+    """Return (client_id, client_secret) or None if not configured."""
+    data = load_settings()
+    cid, csec = data.get("client_id"), data.get("client_secret")
+    if not cid or not csec:
+        print(Fore.RED + "\nSpotify credentials not configured.")
+        print(Fore.YELLOW + "Please set them in the Settings menu first.")
+        input("\nPress Enter to return.")
+        return None
+    return cid, csec
+
+
+# ── Operations ────────────────────────────────────────────────────────────────
 
 def start_playlist_to_liked():
-    """Start the Spotify reordering process."""
-    settings_data = UTILITY.load_settings()
-    client_id = settings_data.get("client_id")
-    client_secret = settings_data.get("client_secret")
-    multi_playlist_mode = settings_data.get("multi_playlist_mode", False)
-    reorder_direction = settings_data.get("reorder_direction", "bottom-to-top")
-
-    if not client_id or not client_secret:
-        print(Fore.RED + "\nSpotify credentials are missing. Please configure them in the Settings menu first.")
-        print(Fore.YELLOW + "\nIf you need to import more than 1 playlist you can fill the Import Playlists/imports.txt")
-        input("\nPress Enter to return to the menu.")
+    """Import a playlist (or multiple) into liked songs."""
+    creds = _require_credentials()
+    if not creds:
         return
+    client_id, client_secret = creds
 
-    if multi_playlist_mode and os.path.exists(PLAYLIST_FILE):
-        print(Fore.BLUE + "Processing multiple playlists...")
-        with open(PLAYLIST_FILE, "r") as file:
-            playlist_urls = [line.strip() for line in file if line.strip()]
-            for playlist_url in playlist_urls:
-                print(Fore.YELLOW + f"\nProcessing playlist: {playlist_url}")
-                REORDER_OPERATION.reorder_liked_songs_from_playlist(playlist_url, client_id, client_secret, reorder_direction)
+    data = load_settings()
+    multi = data.get("multi_playlist_mode", False)
+    direction = data.get("reorder_direction", "bottom-to-top")
+
+    if multi and os.path.exists(PLAYLIST_FILE):
+        print(Fore.BLUE + "Multi-playlist mode: processing import file...")
+        with open(PLAYLIST_FILE, "r") as f:
+            urls = [line.strip() for line in f if line.strip()]
+        for url in urls:
+            print(Fore.YELLOW + f"\n→ Processing: {url}")
+            LikedSongsOps.reorder_liked_songs_from_playlist(url, client_id, client_secret, direction)
     else:
-        playlist_url = input("\nEnter the Spotify playlist link: ").strip()
-        if not playlist_url:
-            print(Fore.RED + "\nNo playlist link provided. Returning to menu.")
-            input("\nPress Enter to return to the menu.")
+        url = input("\nEnter the Spotify playlist link: ").strip()
+        if not url:
+            print(Fore.RED + "No link provided.")
+            input("\nPress Enter to return.")
             return
+        print(Fore.GREEN + "\nProcessing playlist...")
+        LikedSongsOps.reorder_liked_songs_from_playlist(url, client_id, client_secret, direction)
 
-        print(Fore.GREEN + "\nProcessing playlist. This may take a while...")
-        REORDER_OPERATION.reorder_liked_songs_from_playlist(playlist_url, client_id, client_secret, reorder_direction)
-
-    input(Fore.GREEN + "\nReordering complete! Press Enter to return to the menu.")
-    UTILITY.screen_clear()
-    menu()
+    input(Fore.GREEN + "\nDone! Press Enter to return.")
+    screen_clear()
 
 
-def menu():
-    winsound.PlaySound(START_SOUND, winsound.SND_ASYNC)
-    """Display the main menu and handle user input."""
+def start_export():
+    """Export liked songs or a playlist."""
+    creds = _require_credentials()
+    if not creds:
+        return
+    try:
+        ExportPlaylist.export_to_text_file(*creds)
+    except Exception as e:
+        print(Fore.RED + f"\nExport error: {e}")
+        input("\nPress Enter to return.")
+
+
+def start_liked_to_playlist():
+    """Copy liked songs into a new playlist."""
+    creds = _require_credentials()
+    if not creds:
+        return
+    try:
+        liked_songs_to_playlist(*creds)
+    except Exception as e:
+        print(Fore.RED + f"\nError: {e}")
+        input("\nPress Enter to return.")
+
+
+# ── Menus (loop-based, no recursion) ─────────────────────────────────────────
+
+def menu_operations():
+    """Operations sub-menu."""
+    while True:
+        display_banner()
+        print("1 - Playlist → Liked Songs")
+        print("2 - Export playlist / liked songs to file")
+        print("3 - Liked Songs → New Playlist")
+        print("4 - Back")
+        choice = input("\nEnter your choice: ").strip()
+
+        screen_clear()
+        if choice == "1":
+            start_playlist_to_liked()
+        elif choice == "2":
+            start_export()
+        elif choice == "3":
+            start_liked_to_playlist()
+        elif choice == "4":
+            return  # back to main menu (no recursion!)
+        else:
+            print(Fore.RED + "Invalid choice.")
+            input("\nPress Enter to try again.")
+            screen_clear()
+
+
+def main_menu():
+    """Main menu loop."""
+    _play_startup_sound()
     while True:
         display_banner()
         print("1 - Operations")
@@ -107,89 +170,31 @@ def menu():
         print("5 - Exit")
         choice = input("\nEnter your choice: ").strip()
 
+        screen_clear()
         if choice == "1":
-            UTILITY.screen_clear()
             menu_operations()
         elif choice == "2":
-            UTILITY.screen_clear()
-            SETTINGS_OPERATION.settings()
+            Settings.settings()
         elif choice == "3":
-            UTILITY.screen_clear()
             about()
         elif choice == "4":
-            UTILITY.screen_clear()
             tutorial()
         elif choice == "5":
-            UTILITY.screen_clear()
-            print("\nExiting... Goodbye!")
-            time.sleep(3)
-            exit()
+            print(Fore.GREEN + "\nGoodbye!")
+            break
         else:
-            print("\nInvalid choice. Please try again.")
-            input("\nPress Enter to return to the menu.")
+            print(Fore.RED + "Invalid choice.")
+            input("\nPress Enter to try again.")
+            screen_clear()
 
-def menu_operations():
-    """Display the operation menu."""
-    while True:
-        display_banner()
-        print("1 - Playlists to liked songs")
-        print("2 - Export playlist or liked songs to text file")
-        print("3 - Liked songs to play list")
-        print("4 - Back to main menu.")
-        choice = input("\nEnter your choice: ").strip()
 
-        if choice == "1":
-            UTILITY.screen_clear()
-            start_playlist_to_liked()
-        elif choice == "2":
-            UTILITY.screen_clear()
-            # Load settings
-            settings_datas = UTILITY.load_settings()
-            client_id = settings_datas.get("client_id")
-            client_secret = settings_datas.get("client_secret")
-
-            # Check if credentials are available
-            if not client_id or not client_secret:
-                print("\nSpotify credentials not found. Please configure them in the Settings menu first.")
-                input("\nPress Enter to return to the menu.")
-            else:
-                # Proceed with export operation
-                try:
-                    EXPORT_OPERATION.export_to_text_file(client_id, client_secret)
-                except Exception as e:
-                    print(f"\nAn error occurred during export: {e}")
-                    input("\nPress Enter to return to the menu.")
-        elif choice == "3":
-            UTILITY.screen_clear()
-            # Load settings
-            settings_datas = UTILITY.load_settings()
-            client_id = settings_datas.get("client_id")
-            client_secret = settings_datas.get("client_secret")
-
-            if not client_id or not client_secret:
-                print("\nSpotify credentials not found. Please configure them in the Settings menu first.")
-                input("\nPress Enter to return to the menu.")
-            else:
-                # Create a playlist and add liked songs
-                try:
-                    liked_songs_to_playlist(client_id, client_secret)
-                except Exception as e:
-                    print(f"\nAn error occurred: {e}")
-                    input("\nPress Enter to return to the menu.")
-        elif choice == "4":
-            UTILITY.screen_clear()
-            menu()
-        else:
-            print("\nInvalid choice. Please try again.")
-            input("\nPress Enter to return to the menu.")
+# ── Entry point ───────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    # Load settings at the start of the program
-    settings_data =  UTILITY.load_settings()
-    if settings_data["client_id"] and settings_data["client_secret"]:
-        print(Fore.GREEN + "Settings loaded successfully.")
+    data = load_settings()
+    if data["client_id"] and data["client_secret"]:
+        print(Fore.GREEN + "Settings loaded.")
     else:
-        print(Fore.RED + "No settings found. Please configure your Spotify credentials in the Settings menu.")
-
-    # Start the menu
-    menu()
+        print(Fore.YELLOW + "No credentials found — please configure them in Settings.")
+    print()
+    main_menu()

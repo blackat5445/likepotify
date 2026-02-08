@@ -2,176 +2,140 @@ import csv
 import os
 import time
 from datetime import datetime
-import spotipy
-from spotipy.oauth2 import SpotifyOAuth
-from .utils import screen_clear
+from colorama import Fore
+from .utils import screen_clear, get_spotify_client, extract_playlist_id, BASE_DIR
 
-# Constants
-REDIRECT_URI = 'http://127.0.0.1:8888'
-SCOPE = 'playlist-modify-public playlist-modify-private user-library-modify user-library-read'
 
 def export_to_text_file(client_id, client_secret):
-    """Export liked songs or a playlist to a text file."""
+    """Export liked songs or a playlist to text + CSV files."""
     screen_clear()
-    # Initialize Spotify client
-    sp = spotipy.Spotify(auth_manager=SpotifyOAuth(
-        client_id=client_id,
-        client_secret=client_secret,
-        redirect_uri=REDIRECT_URI,
-        scope=SCOPE
-    ))
+    sp = get_spotify_client(client_id, client_secret)
 
-    # Ask user whether to export liked songs or a playlist
-    print("Would you like to export:\n1 - Liked Songs\n2 - Playlist\n3 - Back to Operation Menu")
-    choice = input("Enter your choice (1/2/3): ").strip()
+    print("Would you like to export:")
+    print("  1 - Liked Songs")
+    print("  2 - A Playlist")
+    print("  3 - Back to Operation Menu")
+    choice = input("\nEnter your choice (1/2/3): ").strip()
 
     if choice == "1":
-        # Export liked songs
         export_liked_songs(sp)
     elif choice == "2":
-        # Export a playlist
         playlist_url = input("Enter the Spotify playlist URL: ").strip()
-        export_playlist(sp, playlist_url)
+        if playlist_url:
+            export_playlist(sp, playlist_url)
+        else:
+            print(Fore.RED + "No URL provided.")
     elif choice == "3":
-        print("Returning to the menu.")
+        return
     else:
-        print("Invalid choice. Returning to the menu.")
+        print(Fore.RED + "Invalid choice.")
+
 
 def export_liked_songs(sp):
-    """Export liked songs to a text file."""
+    """Export all liked songs."""
     liked_tracks = []
     offset = 0
     limit = 50
-    total_songs = 0
 
-    print("Fetching liked songs...")
+    print(Fore.CYAN + "Fetching liked songs...")
     while True:
         try:
             results = sp.current_user_saved_tracks(limit=limit, offset=offset)
-            items = results.get('items', [])
-            for item in items:
-                track = item.get('track')
-                if track:
-                    try:
-                        liked_tracks.append(format_track_info(track))
-                    except Exception as e:
-                        print(f"Error formatting track info: {e}")
-            total_songs += len(items)
-            if len(items) == 0:
+            items = results.get("items", [])
+            if not items:
                 break
+            for item in items:
+                track = item.get("track")
+                if track:
+                    liked_tracks.append(_format_track(track))
+            print(f"  Fetched {len(liked_tracks)} songs so far...")
             offset += limit
         except Exception as e:
-            print(f"Error fetching liked songs: {e}")
+            print(Fore.RED + f"  Error fetching songs: {e}")
             time.sleep(2)
+            break
 
+    _write_files("liked_songs", "Liked Songs", liked_tracks)
 
-    write_to_file("liked songs", "Liked Songs", liked_tracks, total_songs)
 
 def export_playlist(sp, playlist_url):
-    """Export a playlist to a text file with support for pagination."""
+    """Export a playlist to text + CSV."""
     try:
-        # Extract playlist ID from URL
-        playlist_id = playlist_url.split("/")[-1].split("?")[0]
-
-        # Fetch playlist details
-        print("Fetching playlist details...")
+        playlist_id = extract_playlist_id(playlist_url)
         playlist = sp.playlist(playlist_id)
-        playlist_name = playlist.get('name', 'Playlist')
+        playlist_name = playlist.get("name", "Playlist")
 
-        # Pagination: fetch all tracks
+        tracks = []
         offset = 0
         limit = 100
-        total_songs = 0
-        formatted_tracks = []
 
+        print(Fore.CYAN + f"Fetching playlist '{playlist_name}'...")
         while True:
-            results = sp.playlist_items(playlist_id, offset=offset, limit=limit, fields="items.track,total")
-            tracks = results.get('items', [])
-            total_songs += len(tracks)
-
-            for item in tracks:
-                try:
-                    track = item.get('track')
-                    if track:
-                        formatted_tracks.append(format_track_info(track))
-                except Exception as e:
-                    print(f"Error formatting track info: {e}")
-
-            # Break the loop if there are no more items to fetch
-            if len(tracks) < limit:
+            results = sp.playlist_items(
+                playlist_id, offset=offset, limit=limit,
+                fields="items.track,total",
+            )
+            items = results.get("items", [])
+            if not items:
                 break
+            for item in items:
+                track = item.get("track")
+                if track:
+                    tracks.append(_format_track(track))
+            offset += limit
 
-            offset += limit  # Move to the next page
+        _write_files(playlist_name, playlist_name, tracks)
 
-        # Write all tracks to the file
-        write_to_file("playlist", playlist_name, formatted_tracks, total_songs)
     except Exception as e:
-        print(f"Error fetching playlist: {e}")
+        print(Fore.RED + f"Error exporting playlist: {e}")
         time.sleep(2)
 
-def format_track_info(track):
-    """Format track information for the text file and CSV file."""
-    try:
-        track_id = track.get('id', 'N/A')
-        track_name = track.get('name', 'Unknown Title')
-        track_artists = ", ".join([artist.get('name', 'Unknown Artist') for artist in track.get('artists', [])])
-        track_duration = time.strftime('%M:%S', time.gmtime(track.get('duration_ms', 0) / 1000))
-        track_url = track.get('external_urls', {}).get('spotify', 'N/A')
-        return {
-            "id": track_id,
-            "title": track_name,
-            "artists": track_artists,
-            "duration": track_duration,
-            "url": track_url,
-        }
-    except Exception as e:
-        print(f"Error extracting track info: {e}")
-        return {
-            "id": "Error",
-            "title": "Error",
-            "artists": "Error",
-            "duration": "Error",
-            "url": "Error",
-        }
 
-def write_to_file(file_prefix, title, tracks, total_songs):
-    """Write the formatted track list to both a text file and a CSV file."""
-    try:
-        # Generate the output file paths
-        maindir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        output_dir = os.path.join(maindir, 'Exported Playlists')
-        os.makedirs(output_dir, exist_ok=True)
+# ── Private helpers ───────────────────────────────────────────────────────────
 
-        # File paths
-        txt_filename = os.path.join(output_dir, f"{file_prefix}.txt")
-        csv_filename = os.path.join(output_dir, f"{file_prefix}.csv")
+def _format_track(track: dict) -> dict:
+    """Return a clean dict with the fields we want to export."""
+    duration_sec = track.get("duration_ms", 0) / 1000
+    return {
+        "id": track.get("id", "N/A"),
+        "title": track.get("name", "Unknown Title"),
+        "artists": ", ".join(a.get("name", "Unknown") for a in track.get("artists", [])),
+        "duration": time.strftime("%M:%S", time.gmtime(duration_sec)),
+        "url": track.get("external_urls", {}).get("spotify", "N/A"),
+    }
 
-        # Write to the text file
-        with open(txt_filename, "w", encoding="utf-8") as txt_file:
-            txt_file.write("#Likepotify\n")
-            txt_file.write("#Created by Kasra Falahati\n")
-            txt_file.write(f"#Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-            txt_file.write(f"#{title}\n")
-            txt_file.write(f"#Total number of songs: {total_songs} songs\n")
-            txt_file.write("#" * 30 + "\n")
-            txt_file.write("ID | TITLE | NAME OF SINGER(S) | TIME | LINK\n")
-            for track in tracks:
-                txt_file.write(f"{track['id']} | {track['title']} | {track['artists']} | {track['duration']} | {track['url']}\n")
 
-        # Write to the CSV file
-        with open(csv_filename, "w", encoding="utf-8", newline="") as csv_file:
-            writer = csv.writer(csv_file)
+def _write_files(file_prefix: str, title: str, tracks: list[dict]):
+    """Write tracks to both a .txt and .csv file."""
+    output_dir = os.path.join(BASE_DIR, "Exported Playlists")
+    os.makedirs(output_dir, exist_ok=True)
 
-            # Write headers
-            writer.writerow(["ID", "TITLE", "NAME OF SINGER(S)", "TIME", "LINK"])
+    # Sanitise filename
+    safe_prefix = "".join(c if c.isalnum() or c in " _-" else "_" for c in file_prefix)
+    txt_path = os.path.join(output_dir, f"{safe_prefix}.txt")
+    csv_path = os.path.join(output_dir, f"{safe_prefix}.csv")
 
-            # Write track data
-            for track in tracks:
-                writer.writerow([track['id'], track['title'], track['artists'], track['duration'], track['url']])
+    # ── TXT ──
+    with open(txt_path, "w", encoding="utf-8") as f:
+        f.write("#Likepotify\n")
+        f.write("#Created by Kasra Falahati\n")
+        f.write(f"#Date: {datetime.now():%Y-%m-%d %H:%M:%S}\n")
+        f.write(f"#{title}\n")
+        f.write(f"#Total songs: {len(tracks)}\n")
+        f.write("#" * 30 + "\n")
+        f.write("ID | TITLE | ARTIST(S) | DURATION | LINK\n")
+        for t in tracks:
+            f.write(f"{t['id']} | {t['title']} | {t['artists']} | {t['duration']} | {t['url']}\n")
 
-        print(f"Export complete! Files saved as:\n- {txt_filename}\n- {csv_filename}")
-        time.sleep(3)
-        screen_clear()
+    # ── CSV ──
+    with open(csv_path, "w", encoding="utf-8", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["ID", "TITLE", "ARTIST(S)", "DURATION", "LINK"])
+        for t in tracks:
+            writer.writerow([t["id"], t["title"], t["artists"], t["duration"], t["url"]])
 
-    except Exception as e:
-        print(f"Error writing to file: {e}")
+    print(Fore.GREEN + f"\nExported {len(tracks)} songs!")
+    print(f"  TXT: {txt_path}")
+    print(f"  CSV: {csv_path}")
+    input("\nPress Enter to continue.")
+    screen_clear()
