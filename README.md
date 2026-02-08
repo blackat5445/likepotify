@@ -84,7 +84,7 @@ Go to your dashboard.
 Click on **Create app**.
 - App name: anything you like.
 - App description: anything you like.
-- **Redirect URIs: http://localhost:8080**
+- **Redirect URIs: http://127.0.0.1:8888**
 
 Check the check box and click on Save.
 
