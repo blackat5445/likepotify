@@ -7,7 +7,7 @@ from spotipy.oauth2 import SpotifyOAuth
 from .utils import screen_clear
 
 # Constants
-REDIRECT_URI = 'http://localhost:8080'
+REDIRECT_URI = 'http://127.0.0.1:8888'
 SCOPE = 'playlist-modify-public playlist-modify-private user-library-modify user-library-read'
 
 def export_to_text_file(client_id, client_secret):
