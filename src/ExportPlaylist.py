@@ -73,13 +73,13 @@ def export_playlist(sp, playlist_url):
         while True:
             results = sp.playlist_items(
                 playlist_id, offset=offset, limit=limit,
-                fields="items.track,total",
+                fields="items.item,total",
             )
             items = results.get("items", [])
             if not items:
                 break
             for item in items:
-                track = item.get("track")
+                track = item.get("item")
                 if track:
                     tracks.append(_format_track(track))
             offset += limit

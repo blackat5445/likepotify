@@ -25,6 +25,8 @@ REDIRECT_URI = "http://127.0.0.1:8888/callback"
 SCOPES = (
     "playlist-modify-public "
     "playlist-modify-private "
+    "playlist-read-private "
+    "playlist-read-collaborative "
     "user-library-modify "
     "user-library-read"
 )
@@ -81,7 +83,14 @@ def get_spotify_client(client_id: str, client_secret: str) -> spotipy.Spotify:
     # If there's a cached token, try to validate / refresh it
     token_info = auth_manager.cache_handler.get_cached_token()
     if token_info:
-        if auth_manager.is_token_expired(token_info):
+        cached_scopes = set((token_info.get("scope") or "").split())
+        required_scopes = set(SCOPES.split())
+        if not required_scopes.issubset(cached_scopes):
+            # Cached token predates a scope change – nuke it so a fresh
+            # browser auth (with the current scopes) runs below.
+            _delete_cache()
+            token_info = None
+        elif auth_manager.is_token_expired(token_info):
             try:
                 token_info = auth_manager.refresh_access_token(token_info["refresh_token"])
             except Exception:
@@ -93,7 +102,11 @@ def get_spotify_client(client_id: str, client_secret: str) -> spotipy.Spotify:
         # Opens the browser for the user to authorize
         token_info = auth_manager.get_access_token(as_dict=True)
 
-    return spotipy.Spotify(auth_manager=auth_manager, requests_timeout=30)
+    # retries=0 disables spotipy's built-in urllib3 retry, which otherwise
+    # blocks for however long Spotify's Retry-After header says (can be
+    # many hours on a 429) before even raising. We handle retries/backoff
+    # ourselves in retry_request() instead.
+    return spotipy.Spotify(auth_manager=auth_manager, requests_timeout=30, retries=0, status_retries=0)
 
 
 def clear_auth_cache():
@@ -113,11 +126,38 @@ def screen_clear():
     os.system("cls" if os.name == "nt" else "clear")
 
 
+MAX_RATE_LIMIT_WAIT = 60  # seconds – beyond this we give up instead of blocking
+
+
 def retry_request(func, *args, retries=3, delay=5, **kwargs):
-    """Call *func(*args, **kwargs)* with automatic retries on failure."""
+    """Call *func(*args, **kwargs)* with automatic retries on failure.
+
+    A 429 (rate limit) is handled specially: short Spotify-requested
+    cooldowns are honored, but if Spotify asks for a long wait (this can be
+    hours) we stop immediately with a clear message instead of blocking.
+    """
     for attempt in range(retries):
         try:
             return func(*args, **kwargs)
+        except spotipy.exceptions.SpotifyException as e:
+            if e.http_status == 429:
+                retry_after = int((e.headers or {}).get("Retry-After", delay))
+                if retry_after > MAX_RATE_LIMIT_WAIT:
+                    print(
+                        f"  Spotify rate limit hit — it wants a {retry_after}s "
+                        f"(~{retry_after / 3600:.1f}h) cooldown. That's too long to "
+                        "wait here, so stopping. Please try again later."
+                    )
+                    raise
+                print(f"  Rate limited by Spotify. Waiting {retry_after}s before retrying...")
+                time.sleep(retry_after)
+                continue
+            if attempt < retries - 1:
+                print(f"  Warning: Request failed: {e}. Retrying in {delay}s...")
+                time.sleep(delay)
+            else:
+                print(f"  Error: Request failed after {retries} attempts: {e}")
+                raise
         except Exception as e:
             if attempt < retries - 1:
                 print(f"  Warning: Request failed: {e}. Retrying in {delay}s...")
