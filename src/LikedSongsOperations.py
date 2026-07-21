@@ -43,7 +43,8 @@ def reorder_liked_songs_from_playlist(playlist_url, client_id, client_secret, re
     while True:
         results = sp.playlist_items(
             playlist_id, offset=offset, limit=limit,
-            fields="items.track.id,items.track.name,total",
+            fields="items.item.id,items.item.name,total",
+            additional_types=["track"]
         )
         items = results.get("items", [])
         if not items:
@@ -65,7 +66,7 @@ def reorder_liked_songs_from_playlist(playlist_url, client_id, client_secret, re
     skipped_count = 0
 
     for i in track_range:
-        track = all_tracks[i].get("track")
+        track = all_tracks[i].get("item")
         if not track:
             print(Fore.LIGHTRED_EX + f"  Skipped invalid entry at position {i}")
             continue
@@ -85,7 +86,11 @@ def reorder_liked_songs_from_playlist(playlist_url, client_id, client_secret, re
             retry_request(sp.current_user_saved_tracks_add, [track_id], retries=3, delay=10)
             liked_count += 1
             print(Fore.LIGHTGREEN_EX + f"  [{liked_count}] Liked: {track_name}")
+            time.sleep(0.15)  # small pacing gap to avoid bursting the rate limit
         except spotipy.exceptions.SpotifyException as e:
+            if e.http_status == 429:
+                print(Fore.RED + "  Stopping: Spotify rate limit exceeded, further requests would fail too.")
+                break
             print(Fore.RED + f"  Error liking '{track_name}': {e}")
 
     print(Fore.BLUE + f"\nDone! Liked {liked_count} new songs, skipped {skipped_count} already-liked.")
